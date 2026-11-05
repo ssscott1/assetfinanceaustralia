@@ -9,7 +9,7 @@ import LeadCaptureScreen from "./LeadCaptureScreen";
 import CommercialAbnScreen from "./CommercialAbnScreen";
 import ResultsScreen from "./ResultsScreen";
 import { consumerTier, commercialTier } from "@/lib/tierEngine";
-import { loadQuoteState, saveQuoteState, recordLeadEvent } from "@/lib/storage";
+import { loadQuoteState, saveQuoteState, clearQuoteState, clearApplicationState, recordLeadEvent } from "@/lib/storage";
 import { track, type QuoteState, type CustomerType, type EmploymentType } from "@/lib/types";
 
 type Step =
@@ -89,28 +89,30 @@ export default function QuoteFlow() {
   const [history, setHistory] = useState<Step[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
-  // Resume from a saved session, if any.
+  // Resume from a saved session, if any — but only an *incomplete* one.
+  // A quote that already reached results is a finished, stale session: the
+  // customer navigating back into /quote (e.g. from the home page) means
+  // they want a new estimate, not their old one replayed from cache.
   useEffect(() => {
     const saved = loadQuoteState();
-    if (saved) {
+    if (saved && saved.reachedResults) {
+      clearQuoteState();
+      clearApplicationState();
+    } else if (saved) {
       setState(saved);
-      if (!saved.reachedResults) {
-        // Resume at the first unanswered step for their branch.
-        if (!saved.common.customerType) setStep("customerType");
-        else if (!saved.common.assetCondition) setStep("assetCondition");
-        else if (saved.common.amount === undefined) setStep("amount");
-        else if (saved.common.customerType.value === "consumer") {
-          if (!saved.consumer.employmentType) setStep("consumerEmployment");
-          else if (saved.consumer.homeowner === undefined) setStep("consumerHomeowner");
-          else if (!saved.lead.mobile) setStep("lead");
-          else setStep("results");
-        } else {
-          if (saved.commercial.propertyOwner === undefined) setStep("commercialAbn");
-          else if (!saved.lead.mobile) setStep("lead");
-          else setStep("results");
-        }
+      // Resume at the first unanswered step for their branch.
+      if (!saved.common.customerType) setStep("customerType");
+      else if (!saved.common.assetCondition) setStep("assetCondition");
+      else if (saved.common.amount === undefined) setStep("amount");
+      else if (saved.common.customerType.value === "consumer") {
+        if (!saved.consumer.employmentType) setStep("consumerEmployment");
+        else if (saved.consumer.homeowner === undefined) setStep("consumerHomeowner");
+        else if (!saved.lead.mobile) setStep("lead");
+        else setStep("results");
       } else {
-        setStep("results");
+        if (saved.commercial.propertyOwner === undefined) setStep("commercialAbn");
+        else if (!saved.lead.mobile) setStep("lead");
+        else setStep("results");
       }
     }
     setHydrated(true);

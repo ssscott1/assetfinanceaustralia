@@ -61,6 +61,11 @@ export function saveApplicationState(state: ApplicationState): void {
   }
 }
 
+export function clearApplicationState(): void {
+  if (!isBrowser()) return;
+  window.localStorage.removeItem(APPLICATION_KEY);
+}
+
 /**
  * Records a lead (name + mobile, saved as soon as they're given, before the
  * estimate is shown) or a "call me back" / "abandoned" event.
