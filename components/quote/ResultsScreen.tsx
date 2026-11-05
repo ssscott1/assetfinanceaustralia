@@ -50,6 +50,12 @@ export default function ResultsScreen({
 
   const balloon = Math.round(amountFinanced * (balloonPct / 100));
 
+  const isDefault = termMonths === rateConfig.loanTermMonths.default && balloonPct === 0;
+  function resetCalculator() {
+    setTermMonths(rateConfig.loanTermMonths.default);
+    setBalloonPct(0);
+  }
+
   const spread = rateConfig.rateSpreadPct ?? 0;
   const lowRate = Math.max(0, rate - spread);
   const highRate = rate + spread;
@@ -86,7 +92,17 @@ export default function ResultsScreen({
         <p className="mt-1 text-sm text-slate">{tierDescription[tier]}</p>
 
         <div className="mt-6 rounded-2xl border border-slate/15 bg-white p-5">
-          <p className="text-sm text-slate">Estimated repayments</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate">Estimated repayments</p>
+            <button
+              type="button"
+              disabled={isDefault}
+              onClick={resetCalculator}
+              className="text-sm font-medium text-brand disabled:text-slate/40"
+            >
+              Reset
+            </button>
+          </div>
           <p className="mt-1 text-3xl font-bold text-ink">
             {formatCurrency(repaymentsLow.weekly)}
             {repaymentsHigh.weekly !== repaymentsLow.weekly && ` – ${formatCurrency(repaymentsHigh.weekly)}`}
